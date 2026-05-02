@@ -22,9 +22,9 @@ jobs:
 
       - name: Start server
         run: |
-          node server.js &
+          PORT=3001 node server.js &
           sleep 5
 
       - name: Test upload endpoint
         run: |
-          curl -X POST http://localhost:3001/upload -F "image=@test.jpg" || exit 1
+          curl -f -X POST http://localhost:3001/upload -F "image=@test.jpg"

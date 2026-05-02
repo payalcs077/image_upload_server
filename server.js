@@ -3,9 +3,13 @@ require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const AWS = require("aws-sdk");
+const cors = require("cors");
 const { v4: uuidv4 } = require("uuid");
 
 const app = express();
+
+// -------------------- Middleware --------------------
+app.use(cors());
 
 // -------------------- Multer Setup --------------------
 const storage = multer.memoryStorage();
@@ -34,27 +38,33 @@ const s3 = new AWS.S3({
 
 // -------------------- Routes --------------------
 
-// Health check (optional but useful)
+// Health check
 app.get("/", (req, res) => {
   res.send("Server is running 🚀");
+});
+
+// Optional GET /upload (for browser)
+app.get("/upload", (req, res) => {
+  res.send("Use POST method to upload image");
 });
 
 // Upload API
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
+    const PORT = process.env.PORT || 3001;
     console.log(`Handled by port ${PORT}`);
 
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // ✅ CI mode (NO AWS)
+    // ✅ CI fallback (no AWS keys)
     if (!process.env.AWS_ACCESS_KEY) {
-      return res.json({
-        message: "CI test mode",
-        servedBy: PORT
-      });
-    }
+    return res.json({
+    message: "CI test mode",
+    servedBy: PORT
+  });
+}
 
     const fileName = `${uuidv4()}-${Date.now()}`;
 
@@ -69,7 +79,6 @@ app.post("/upload", upload.single("image"), async (req, res) => {
 
     const data = await s3.upload(params).promise();
 
-    // ✅ Proper response
     res.json({
       url: data.Location,
       servedBy: PORT
@@ -83,6 +92,7 @@ app.post("/upload", upload.single("image"), async (req, res) => {
     });
   }
 });
+
 // -------------------- Start Server --------------------
 const PORT = process.env.PORT || 3001;
 
