@@ -9,21 +9,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Create test image
+      - name: Run automated tests
+        run: npm test
+
+      - name: Create smoke-test image
         run: |
           echo "dummy" > test.jpg
 
       - name: Start server
         run: |
-          PORT=3001 node server.js &
+          CI=true PORT=3001 npm start &
           sleep 5
 
       - name: Health check

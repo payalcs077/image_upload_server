@@ -1,10 +1,12 @@
-require("dotenv").config();
+if (process.env.NODE_ENV !== "test") {
+  require("dotenv").config();
+}
 
+const { randomUUID } = require("crypto");
 const express = require("express");
 const multer = require("multer");
-const AWS = require("aws-sdk");
 const cors = require("cors");
-const { v4: uuidv4 } = require("uuid");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
 
@@ -18,10 +20,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
   fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/png"
-    ) {
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
       cb(null, true);
     } else {
       cb(new Error("Only JPG/PNG files allowed"), false);
@@ -30,17 +29,42 @@ const upload = multer({
 });
 
 // -------------------- AWS S3 Setup --------------------
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY,
-  secretAccessKey: process.env.AWS_SECRET_KEY,
-  region: process.env.AWS_REGION,
-});
+function hasAwsConfig() {
+  return Boolean(
+    process.env.AWS_ACCESS_KEY &&
+      process.env.AWS_SECRET_KEY &&
+      process.env.AWS_REGION &&
+      process.env.S3_BUCKET
+  );
+}
+
+function createS3Client() {
+  return new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_SECRET_KEY,
+    },
+  });
+}
+
+function shouldUseMockUpload() {
+  return (
+    process.env.CI === "true" ||
+    process.env.NODE_ENV === "test" ||
+    !hasAwsConfig()
+  );
+}
+
+function getFileExtension(mimetype) {
+  return mimetype === "image/png" ? ".png" : ".jpg";
+}
 
 // -------------------- Routes --------------------
 
 // Health check
 app.get("/", (req, res) => {
-  res.send("Server is running 🚀");
+  res.send("Server is running");
 });
 
 // Optional GET /upload (for browser)
@@ -58,15 +82,18 @@ app.post("/upload", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // ✅ CI fallback (no AWS keys)
-    if (!process.env.AWS_ACCESS_KEY) {
-    return res.json({
-    message: "CI test mode",
-    servedBy: PORT
-  });
-}
+    if (shouldUseMockUpload()) {
+      return res.json({
+        message: "Upload accepted; AWS S3 is not used in this environment",
+        fileName: req.file.originalname,
+        size: req.file.size,
+        servedBy: PORT,
+      });
+    }
 
-    const fileName = `${uuidv4()}-${Date.now()}`;
+    const fileName = `${randomUUID()}-${Date.now()}${getFileExtension(
+      req.file.mimetype
+    )}`;
 
     const params = {
       Bucket: process.env.S3_BUCKET,
@@ -77,13 +104,14 @@ app.post("/upload", upload.single("image"), async (req, res) => {
 
     console.log("Uploading:", params.Key);
 
-    const data = await s3.upload(params).promise();
+    await createS3Client().send(new PutObjectCommand(params));
 
     res.json({
-      url: data.Location,
-      servedBy: PORT
+      url: `https://${params.Bucket}.s3.${
+        process.env.AWS_REGION
+      }.amazonaws.com/${encodeURIComponent(params.Key)}`,
+      servedBy: PORT,
     });
-
   } catch (err) {
     console.error("UPLOAD ERROR:", err.message);
 
@@ -93,9 +121,26 @@ app.post("/upload", upload.single("image"), async (req, res) => {
   }
 });
 
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    const status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    return res.status(status).json({ error: err.message });
+  }
+
+  if (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  return next();
+});
+
 // -------------------- Start Server --------------------
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

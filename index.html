@@ -31,8 +31,19 @@
 
       const data = await res.json();
 
-      document.getElementById("result").innerHTML =
-        `Uploaded! <br><a href="${data.url}" target="_blank">${data.url}</a>`;
+      if (!res.ok) {
+        document.getElementById("result").textContent =
+          data.error || "Upload failed";
+        return;
+      }
+
+      if (data.url) {
+        document.getElementById("result").innerHTML =
+          `Uploaded! <br><a href="${data.url}" target="_blank">${data.url}</a>`;
+      } else {
+        document.getElementById("result").textContent =
+          data.message || "Upload accepted";
+      }
     }
   </script>
 </body>
