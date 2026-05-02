@@ -1,50 +1,590 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Image Upload</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f6f7f9;
+      --surface: #ffffff;
+      --surface-alt: #eef4f1;
+      --text: #17201b;
+      --muted: #5f6b66;
+      --border: #d9e0dd;
+      --accent: #16775b;
+      --accent-dark: #0e5f49;
+      --danger: #b3261e;
+      --focus: #2f80ed;
+      --shadow: 0 18px 45px rgba(25, 41, 35, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 720;
+    }
+
+    .status-pill {
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .uploader {
+      padding: 22px;
+    }
+
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 320px;
+      border: 2px dashed #b8c7c1;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragging {
+      border-color: var(--accent);
+      background: #e6f4ef;
+    }
+
+    .dropzone:focus-within {
+      outline: 3px solid rgba(47, 128, 237, 0.28);
+      outline-offset: 3px;
+    }
+
+    .dropzone input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .empty-state {
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .upload-icon {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--accent);
+      font-size: 28px;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1px var(--border);
+    }
+
+    .empty-state strong {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 680;
+    }
+
+    .preview {
+      width: 100%;
+      display: none;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .preview.active {
+      display: grid;
+    }
+
+    .preview-frame {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #dfe5e2;
+    }
+
+    .preview-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .file-meta {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .file-meta strong {
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(47, 128, 237, 0.35);
+      outline-offset: 2px;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:hover {
+      background: var(--accent-dark);
+    }
+
+    .primary:disabled {
+      cursor: not-allowed;
+      background: #8ba79d;
+    }
+
+    .secondary {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .details {
+      padding: 20px;
+    }
+
+    .details h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .endpoint-row {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    input[type="url"] {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input[type="url"]:focus {
+      border-color: var(--focus);
+      outline: 3px solid rgba(47, 128, 237, 0.18);
+    }
+
+    .result {
+      min-height: 132px;
+      border-top: 1px solid var(--border);
+      padding: 18px 20px 20px;
+    }
+
+    .result-title {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .message {
+      margin: 0;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    .message.success {
+      color: var(--accent-dark);
+    }
+
+    .message a {
+      color: var(--accent-dark);
+      font-weight: 650;
+    }
+
+    .facts {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .facts li {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .facts span:last-child {
+      color: var(--text);
+      font-weight: 650;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 24px, 1040px);
+        padding: 28px 0;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .dropzone {
+        min-height: 250px;
+      }
+
+      .status-pill {
+        white-space: normal;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>Upload Image</h2>
+  <main>
+    <div class="topbar">
+      <h1>Image Upload</h1>
+      <div class="status-pill" id="status">Ready</div>
+    </div>
 
-  <input type="file" id="fileInput" />
-  <button onclick="upload()">Upload</button>
+    <section class="workspace" aria-label="Image upload workspace">
+      <div class="panel uploader">
+        <label class="dropzone" id="dropzone">
+          <input id="fileInput" type="file" accept="image/jpeg,image/png" />
+          <span class="empty-state" id="emptyState">
+            <span class="upload-icon" aria-hidden="true">+</span>
+            <strong>Select or drop an image</strong>
+            <span>JPG or PNG, up to 2 MB</span>
+          </span>
+          <span class="preview" id="preview">
+            <span class="preview-frame">
+              <img id="previewImage" alt="Selected image preview" />
+            </span>
+            <span class="file-meta">
+              <strong id="fileName"></strong>
+              <span id="fileDetails"></span>
+            </span>
+          </span>
+        </label>
 
-  <p id="result"></p>
+        <div class="actions">
+          <button class="primary" id="uploadButton" type="button" disabled>Upload</button>
+          <button class="secondary" id="clearButton" type="button">Clear</button>
+        </div>
+      </div>
+
+      <aside class="panel" aria-label="Upload details">
+        <div class="details">
+          <h2>Upload Target</h2>
+          <div class="endpoint-row">
+            <label for="endpoint">Endpoint</label>
+            <input id="endpoint" type="url" spellcheck="false" />
+          </div>
+          <ul class="facts">
+            <li><span>Accepted</span><span>JPG, PNG</span></li>
+            <li><span>Limit</span><span>2 MB</span></li>
+            <li><span>Field</span><span>image</span></li>
+          </ul>
+        </div>
+        <div class="result">
+          <p class="result-title">Result</p>
+          <p class="message" id="result">No upload yet.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
 
   <script>
-    async function upload() {
-      const fileInput = document.getElementById("fileInput");
-      const file = fileInput.files[0];
+    const maxFileSize = 2 * 1024 * 1024;
+    const allowedTypes = new Set(["image/jpeg", "image/png"]);
+    const endpointInput = document.getElementById("endpoint");
+    const fileInput = document.getElementById("fileInput");
+    const dropzone = document.getElementById("dropzone");
+    const emptyState = document.getElementById("emptyState");
+    const preview = document.getElementById("preview");
+    const previewImage = document.getElementById("previewImage");
+    const fileName = document.getElementById("fileName");
+    const fileDetails = document.getElementById("fileDetails");
+    const uploadButton = document.getElementById("uploadButton");
+    const clearButton = document.getElementById("clearButton");
+    const result = document.getElementById("result");
+    const status = document.getElementById("status");
 
+    let selectedFile = null;
+    let previewUrl = null;
+
+    function defaultEndpoint() {
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        return `${window.location.origin}/upload`;
+      }
+
+      return "http://localhost:3001/upload";
+    }
+
+    endpointInput.value = localStorage.getItem("uploadEndpoint") || defaultEndpoint();
+
+    endpointInput.addEventListener("input", () => {
+      localStorage.setItem("uploadEndpoint", endpointInput.value.trim());
+    });
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) {
+        return `${bytes} B`;
+      }
+
+      if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(1)} KB`;
+      }
+
+      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function setMessage(text, type = "") {
+      result.className = `message ${type}`.trim();
+      result.textContent = text;
+    }
+
+    function setStatus(text) {
+      status.textContent = text;
+    }
+
+    function validateFile(file) {
       if (!file) {
-        alert("Select a file first");
+        return "Select an image first.";
+      }
+
+      if (!allowedTypes.has(file.type)) {
+        return "Only JPG and PNG files are accepted.";
+      }
+
+      if (file.size > maxFileSize) {
+        return "File is larger than 2 MB.";
+      }
+
+      return "";
+    }
+
+    function showPreview(file) {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      selectedFile = file;
+      previewUrl = URL.createObjectURL(file);
+      previewImage.src = previewUrl;
+      fileName.textContent = file.name;
+      fileDetails.textContent = `${file.type || "image"} · ${formatBytes(file.size)}`;
+      emptyState.style.display = "none";
+      preview.classList.add("active");
+      uploadButton.disabled = false;
+      setStatus("Ready to upload");
+      setMessage("Image selected.", "success");
+    }
+
+    function clearSelection() {
+      selectedFile = null;
+      fileInput.value = "";
+      uploadButton.disabled = true;
+      emptyState.style.display = "grid";
+      preview.classList.remove("active");
+      previewImage.removeAttribute("src");
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+      }
+
+      setStatus("Ready");
+      setMessage("No upload yet.");
+    }
+
+    function handleFile(file) {
+      const error = validateFile(file);
+
+      if (error) {
+        clearSelection();
+        setMessage(error, "error");
+        setStatus("Needs attention");
+        return;
+      }
+
+      showPreview(file);
+    }
+
+    fileInput.addEventListener("change", () => {
+      handleFile(fileInput.files[0]);
+    });
+
+    dropzone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropzone.classList.add("dragging");
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragging");
+    });
+
+    dropzone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropzone.classList.remove("dragging");
+      handleFile(event.dataTransfer.files[0]);
+    });
+
+    clearButton.addEventListener("click", clearSelection);
+
+    uploadButton.addEventListener("click", async () => {
+      const error = validateFile(selectedFile);
+
+      if (error) {
+        setMessage(error, "error");
+        setStatus("Needs attention");
+        return;
+      }
+
+      const endpoint = endpointInput.value.trim();
+
+      if (!endpoint) {
+        setMessage("Enter an upload endpoint.", "error");
+        setStatus("Needs attention");
         return;
       }
 
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", selectedFile);
+      uploadButton.disabled = true;
+      setStatus("Uploading");
+      setMessage("Uploading image...");
 
-      const res = await fetch("http://localhost:8080/upload", {
-        method: "POST",
-        body: formData
-      });
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
 
-      const data = await res.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Upload failed.");
+        }
 
-      if (!res.ok) {
-        document.getElementById("result").textContent =
-          data.error || "Upload failed";
-        return;
+        if (data.url) {
+          result.className = "message success";
+          result.innerHTML = `Uploaded to <a href="${data.url}" target="_blank" rel="noreferrer">${data.url}</a>`;
+        } else {
+          setMessage(data.message || "Upload accepted.", "success");
+        }
+
+        setStatus(`Served by ${data.servedBy || "server"}`);
+      } catch (error) {
+        setMessage(error.message || "Upload failed.", "error");
+        setStatus("Upload failed");
+      } finally {
+        uploadButton.disabled = !selectedFile;
       }
-
-      if (data.url) {
-        document.getElementById("result").innerHTML =
-          `Uploaded! <br><a href="${data.url}" target="_blank">${data.url}</a>`;
-      } else {
-        document.getElementById("result").textContent =
-          data.message || "Upload accepted";
-      }
-    }
+    });
   </script>
 </body>
 </html>

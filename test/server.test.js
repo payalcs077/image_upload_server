@@ -37,6 +37,22 @@ test("GET / returns health check text", async () => {
   }
 });
 
+test("GET /app returns the upload frontend", async () => {
+  const server = await startTestServer();
+
+  try {
+    const response = await fetch(`${server.baseUrl}/app`);
+    const body = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type"), /text\/html/);
+    assert.match(body, /<h1>Image Upload<\/h1>/);
+    assert.match(body, /id="uploadButton"/);
+  } finally {
+    await server.close();
+  }
+});
+
 test("POST /upload rejects requests without a file", async () => {
   const server = await startTestServer();
 

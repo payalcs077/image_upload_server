@@ -48,6 +48,12 @@ npm start
 
 The server listens on `http://localhost:3001` by default.
 
+Open the frontend:
+
+```text
+http://localhost:3001/app
+```
+
 Health check:
 
 ```bash
@@ -73,6 +79,10 @@ Server is running
 ### `GET /upload`
 
 Returns a short message explaining that uploads must use `POST`.
+
+### `GET /app`
+
+Returns the browser frontend for selecting, previewing, and uploading JPG or PNG files.
 
 ### `POST /upload`
 
@@ -112,7 +122,7 @@ Run the automated tests:
 npm test
 ```
 
-The test suite covers the health check, missing upload file handling, accepted JPG uploads without AWS configuration, and rejected non-image uploads.
+The test suite covers the health check, frontend route, missing upload file handling, accepted JPG uploads without AWS configuration, and rejected non-image uploads.
 
 ## CI Pipeline
 

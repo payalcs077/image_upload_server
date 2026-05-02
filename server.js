@@ -3,6 +3,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 const { randomUUID } = require("crypto");
+const path = require("path");
 const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
@@ -65,6 +66,10 @@ function getFileExtension(mimetype) {
 // Health check
 app.get("/", (req, res) => {
   res.send("Server is running");
+});
+
+app.get("/app", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // Optional GET /upload (for browser)
